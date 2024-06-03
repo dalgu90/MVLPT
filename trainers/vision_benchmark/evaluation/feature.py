@@ -126,7 +126,7 @@ def get_dataloader(dataset, val_split=0.0, batch_size_per_gpu=64, workers=6, pin
 
             logging.info('Quick fetch label starts.')
             labels = quick_fetch_labels(dataset)
-            
+
             logging.info('Quick fetch label finished.')
             # logging.info('Full fetch label starts.')
             # labels_all_fetch = np.asarray([x[1] for x in dataset])
@@ -357,7 +357,8 @@ def extract_feature(model, data_loader, config):
 
 
 def multilabel_to_vec(indices, n_classes):
-    vec = np.zeros(n_classes, dtype=np.int)
+    vec = np.zeros(n_classes, dtype=np.int32)
+    # vec = np.zeros(n_classes, dtype=np.int)
     for x in indices:
         vec[x] = 1
     return vec
@@ -386,7 +387,7 @@ def hypernyms_chain(concept):
 
     while len(ss) > 0:
         ss = ss[0]
-        
+
         hypernyms_chain.append(ss.lemmas()[0].name() )
         # print(f'{ss.name()}, {ss.definition()}, {ss.hypernyms()}')
         ss = ss.hypernyms()
@@ -419,33 +420,33 @@ def extract_text_features(config, tokenizer, args=None, model=None, return_numpy
 
     if config.KNOWLEDGE.WIKITIONARY.USE_DEFINITION:
         wiki_path = config.KNOWLEDGE.WIKITIONARY.WIKI_DICT_PATH
-        wiki_tsv_path = os.path.join(wiki_path,  config.DATASET.DATASET + '_knowledge.tsv') 
+        wiki_tsv_path = os.path.join(wiki_path,  config.DATASET.DATASET + '_knowledge.tsv')
         wiki_anwser_list = json.load(open(wiki_tsv_path, encoding='utf-8'))
 
         count_has_wiki_knowledge = 0
         wiki_dict = {}
         for k2v in wiki_anwser_list:
-            wiki_dict[ k2v['classname'] ] = k2v['def_wiki']   
+            wiki_dict[ k2v['classname'] ] = k2v['def_wiki']
             if k2v['def_wiki']:
                 count_has_wiki_knowledge += 1
         logging.info(f'coverage is {count_has_wiki_knowledge} / {len(wiki_dict)}')
 
     if config.KNOWLEDGE.WORDNET.USE_DEFINITION:
         wiki_path = config.KNOWLEDGE.WIKITIONARY.WIKI_DICT_PATH
-        wiki_tsv_path = os.path.join(wiki_path,  config.DATASET.DATASET + '_knowledge.tsv') 
+        wiki_tsv_path = os.path.join(wiki_path,  config.DATASET.DATASET + '_knowledge.tsv')
         wiki_anwser_list = json.load(open(wiki_tsv_path, encoding='utf-8'))
 
         count_has_wiki_knowledge = 0
         wiki_dict = {}
         for k2v in wiki_anwser_list:
-            wiki_dict[ k2v['classname'] ] = k2v['def_wn']   
+            wiki_dict[ k2v['classname'] ] = k2v['def_wn']
             if k2v['def_wn']:
                 count_has_wiki_knowledge += 1
         logging.info(f'coverage is {count_has_wiki_knowledge} / {len(wiki_dict)}')
 
     if config.KNOWLEDGE.WORDNET.USE_HIERARCHY:
         wiki_path = config.KNOWLEDGE.WIKITIONARY.WIKI_DICT_PATH
-        wiki_tsv_path = os.path.join(wiki_path,  config.DATASET.DATASET + '_knowledge.tsv') 
+        wiki_tsv_path = os.path.join(wiki_path,  config.DATASET.DATASET + '_knowledge.tsv')
         wiki_anwser_list = json.load(open(wiki_tsv_path, encoding='utf-8'))
 
         count_has_wiki_knowledge = 0
@@ -455,8 +456,8 @@ def extract_text_features(config, tokenizer, args=None, model=None, return_numpy
                 path_length = min(3, len(k2v['path_wn']))
                 path_wn = ' '.join(k2v['path_wn'][:path_length])
 
-            else: 
-                path_wn = k2v['path_wn']   
+            else:
+                path_wn = k2v['path_wn']
             wiki_dict[ k2v['classname'] ] = path_wn
             if k2v['path_wn']:
                 count_has_wiki_knowledge += 1
@@ -464,7 +465,7 @@ def extract_text_features(config, tokenizer, args=None, model=None, return_numpy
 
     if config.KNOWLEDGE.GPT3.USE_GPT3:
         gpt3_path = config.KNOWLEDGE.GPT3.GPT3_DICT_PATH
-        gpt3_tsv_path = os.path.join(gpt3_path,  'GPT3_' + config.DATASET.DATASET + '.tsv') 
+        gpt3_tsv_path = os.path.join(gpt3_path,  'GPT3_' + config.DATASET.DATASET + '.tsv')
         gpt3_anwser_list = json.load(open(gpt3_tsv_path, encoding='utf-8'))
 
         gpt3_dict = {}
@@ -473,7 +474,7 @@ def extract_text_features(config, tokenizer, args=None, model=None, return_numpy
 
     if args is not None and args.text_feature_only:
         return wiki_dict, gpt3_dict
-    
+
     templates = template_map.get(config.DATASET.DATASET, ['a photo of a {}'])
     if model is None:
         model = get_model(config, feature_type='text')
@@ -496,13 +497,13 @@ def extract_text_features(config, tokenizer, args=None, model=None, return_numpy
             if config.KNOWLEDGE.AGGREGATION.MEHTOD == 'WIKI_AND_GPT3':
                 for knowledge_text in gpt3_dict[classname][:config.KNOWLEDGE.AGGREGATION.NUM_GPT3_ITEMS]:
                     knowledge_text_list.append(knowledge_text)
-                    gpt3_count += 1          
-            
+                    gpt3_count += 1
+
             elif config.KNOWLEDGE.AGGREGATION.MEHTOD == 'WIKI_THEN_GPT3' and len(knowledge_text_list) == 0:
                 for knowledge_text in gpt3_dict[classname][:config.KNOWLEDGE.AGGREGATION.NUM_GPT3_ITEMS]:
                     knowledge_text_list.append(knowledge_text)
                     gpt3_count += 1
-        
+
         knowledge_text_list_aug = []
         for knowledge_text in knowledge_text_list:
             knowledge_text = f' ; {classname} , ' + knowledge_text if knowledge_text is not None else ''
@@ -565,7 +566,7 @@ def construct_dataloader(config, feature_type="image", test_split_only=False):
         if results:
             test_set, test_set_dataset_info, _ = results
         logging.info(f'Test size is {len(test_set.images)}.')
-        
+
         # re-define transform_clip to organize the labels
         if test_set_dataset_info.type == DatasetTypes.IC_MULTILABEL:
             previous_transform = transform_clip
@@ -597,7 +598,7 @@ def construct_dataloader(config, feature_type="image", test_split_only=False):
                 num_samples_per_class = config.DATASET.NUM_SAMPLES_PER_CLASS
                 random_seed = config.DATASET.RANDOM_SEED_SAMPLING
                 train_set = train_set.sample_few_shot_subset(num_samples_per_class, random_seed)
-            
+
             val_split=0.2
             if config.DATASET.NUM_SAMPLES_PER_CLASS == 1:
                 batch_size = min(config.DATALOADER.TRAIN_X.BATCH_SIZE, len(train_set))
@@ -649,7 +650,7 @@ def construct_dataset(config, feature_type="image", test_split_only=False):
         if results:
             test_set, test_set_dataset_info, _ = results
         logging.info(f'Test size is {len(test_set.images)}.')
-        
+
         # re-define transform_clip to organize the labels
         if test_set_dataset_info.type == DatasetTypes.IC_MULTILABEL:
             previous_transform = transform_clip
@@ -683,7 +684,7 @@ def construct_dataset(config, feature_type="image", test_split_only=False):
             #     random_seed = config.DATASET.RANDOM_SEED_SAMPLING
             #     train_set = train_set.sample_few_shot_subset(num_samples_per_class, random_seed)
             # train_dataset = ManifestDataset(train_set_dataset_info, train_set)
-            
+
             # val_split=0.2
             # train_dataloader, val_dataloader = get_dataloader(TorchDataset( ManifestDataset(train_set_dataset_info, train_set), transform=transform_clip), val_split=val_split, batch_size_per_gpu=config.DATALOADER.TRAIN_X.BATCH_SIZE)
             # logging.info(f'Val split from Train set: Train size is {len(train_set.images)*(1-val_split)}, and validation size is {len(train_set.images)*val_split}.')
@@ -742,7 +743,7 @@ class MultiTaskTorchDataset(Dataset):
             # make everything 2D - one-hot
             if len(target) == 1:
                 target = multilabel_to_vec( target, self._multitask_num_class )
-            # target = self.dataset.dataset_manifest._get_cid(task_label, task) 
+            # target = self.dataset.dataset_manifest._get_cid(task_label, task)
             # print(target, transform)
             # image, target = transform(image, [[target]])
             return image, torch.tensor(target), idx_str, self._task2id[task]
@@ -778,12 +779,12 @@ def create_multitask_manifest(manifest_by_task: dict):
     data_types = {task_name: manifest_by_task[task_name].data_type for task_name in task_names}
 
     return DatasetManifest(images, labelmap, data_types)
-    
+
 def construct_multitask_dataset(config, feature_type="image", test_split_only=False):
     from vision_datasets import Usages, DatasetTypes
     from vision_datasets.common.dataset_info import DatasetInfoFactory, MultiTaskDatasetInfo
     from vision_datasets.pytorch import TorchDataset
-    
+
     if config.DATASET.CENTER_CROP:
         logging.info('Do center crop')
         transform_clip_general = transforms.Compose([
@@ -806,7 +807,7 @@ def construct_multitask_dataset(config, feature_type="image", test_split_only=Fa
     dataset_info_dict_train, dataset_info_dict_test = {'name': 'mt', 'type': 'multitask', 'tasks': dict(), 'root_folder': config.DATASET.ROOT}, \
     {'name': 'mt', 'type': 'multitask', 'tasks': dict(), 'root_folder': config.DATASET.ROOT}
     multitask_train_manifest_info, multitask_test_manifest_info = MultiTaskDatasetInfo(dataset_info_dict_train), MultiTaskDatasetInfo(dataset_info_dict_test)
-    
+
     # HACK: use "," to split the dataset names
     dataset_names = config.DATASET.DATASET.split(',')
     print(class_map.keys())
@@ -828,8 +829,8 @@ def construct_multitask_dataset(config, feature_type="image", test_split_only=Fa
 
     multitask_train_manifest_info.sub_task_infos = dataset_info_dict_train
     multitask_test_manifest_info.sub_task_infos = dataset_info_dict_test
-    
-    # REDO the transform_clip for Multi-Label Sub-tasks => Given the total number_classes has changed 
+
+    # REDO the transform_clip for Multi-Label Sub-tasks => Given the total number_classes has changed
     multitask_num_class = sum([len(multitask_train_manifest.labelmap[task]) for task in multitask_train_manifest.labelmap])
     for sub_task in transform_clip_by_task:
         if dataset_info_dict_train[sub_task].type == DatasetTypes.IC_MULTILABEL:
@@ -838,7 +839,7 @@ def construct_multitask_dataset(config, feature_type="image", test_split_only=Fa
             def transform_clip(x, y):
                 return (previous_transform(x), multilabel_to_vec(y, multitask_num_class))
             transform_clip_by_task[ sub_task ] = transform_clip
-            
+
     # few-shot dataset construction
     if config.DATASET.NUM_SAMPLES_PER_CLASS > 0:
         num_samples_per_class = config.DATASET.NUM_SAMPLES_PER_CLASS
