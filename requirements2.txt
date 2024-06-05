@@ -1,0 +1,13 @@
+pytorch_lightning
+torchmetrics
+transformers
+einops
+pyarrow
+sacred
+git+https://github.com/rwightman/pytorch-image-models.git
+tensorboardX
+opencv-python
+datasets
+nltk
+vision_datasets==0.2.9
+gdown
